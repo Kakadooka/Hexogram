@@ -10,10 +10,12 @@ public class Hex_Handler : MonoBehaviour
     public bool hexState;
     bool isStateKnown = false;
     Hexgrid_Handler hagrid;
+    Pan_And_Zoom panAndZoom;
 
     void Start(){
         spriteRenderer = GetComponent<SpriteRenderer>();
         hagrid = GameObject.Find("!SCRIPT HOLDER!").GetComponent<Hexgrid_Handler>();
+        panAndZoom = GameObject.Find("!SCRIPT HOLDER!").GetComponent<Pan_And_Zoom>();
     }
 
     public bool state;
@@ -72,47 +74,38 @@ public class Hex_Handler : MonoBehaviour
             spriteRenderer.sprite = sprites[5];
         }  
     }
-    public void SetSpriteAndHoldDrag(){
+    public void SetSpriteHoldAndDrag(){
         if(!isStateKnown){
             spriteRenderer.sprite = sprites[6];
         }  
     }
-    
-    void Update(){
-        
-    }  
 
-    void OnMouseUp(){
-        if(hagrid.draggedSquareOrigin == "" || hagrid.draggedSquareOrigin == gameObject.name){
-            hagrid.hexX = X; hagrid.hexY = Y;
+    void ifBlockedClearLineIfNotSelectHexes(){
+        hagrid.hexX = X; hagrid.hexY = Y;
+        if(panAndZoom.blockedPlacement){
+            hagrid.deselectEntireLineOnPreviousAxisIfAxisWasChanged();
+            SetSpriteMaybe();     
+        }
+        else if(hagrid.draggedSquareOrigin == "" || hagrid.draggedSquareOrigin == gameObject.name){
             hagrid.selectDraggedOverHexes();
             hagrid.draggedSquareOrigin = gameObject.name;
         }
+    }
+
+    void OnMouseUp(){
+        ifBlockedClearLineIfNotSelectHexes();
     }
 
     void OnMouseDrag(){
-        if(hagrid.draggedSquareOrigin == "" || hagrid.draggedSquareOrigin == gameObject.name){
-            hagrid.hexX = X; hagrid.hexY = Y;
-            hagrid.selectDraggedOverHexes();
-            hagrid.draggedSquareOrigin = gameObject.name;
-        }
+        ifBlockedClearLineIfNotSelectHexes();
     }
 
     void OnRightMouseDrag(){
-        if(hagrid.draggedSquareOrigin == "" || hagrid.draggedSquareOrigin == gameObject.name){
-            hagrid.hexX = X; hagrid.hexY = Y;
-            hagrid.selectDraggedOverHexes();
-            hagrid.draggedSquareOrigin = gameObject.name;
-        }
+        ifBlockedClearLineIfNotSelectHexes();
     }
 
     void OnRightMouseUp(){
-        if(hagrid.draggedSquareOrigin == "" || hagrid.draggedSquareOrigin == gameObject.name){
-            hagrid.hexX = X; hagrid.hexY = Y;
-            hagrid.selectDraggedOverHexes();
-            hagrid.draggedSquareOrigin = gameObject.name;
-        }
+        ifBlockedClearLineIfNotSelectHexes();
     }
-
 
 }

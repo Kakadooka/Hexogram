@@ -5,9 +5,10 @@ using UnityEngine;
 public class Drag_Mouse : MonoBehaviour
 {
 
-    bool isDragActive = false;
-    bool downInPreviousFrame = false;
+    bool isRightMouseDragActive = false;
+    bool rightMouseDownInPreviousFrame = false;
     bool mouseOver = false;
+    bool rightMouseDragActive = false;
 
     void OnMouseExit(){
         mouseOver = false;
@@ -18,30 +19,31 @@ public class Drag_Mouse : MonoBehaviour
     }
     
     void Update () {
-        if (Input.GetMouseButton(1) && (mouseOver || downInPreviousFrame))
+
+        if (Input.GetMouseButton(1) && (mouseOver || rightMouseDownInPreviousFrame))
         {
-            if (downInPreviousFrame)
+            if (rightMouseDownInPreviousFrame)
             {
-                if (isDragActive)
+                if (isRightMouseDragActive)
                 {
                     gameObject.SendMessage("OnRightMouseDrag",SendMessageOptions.DontRequireReceiver);
                 }
                 else
                 {
-                    isDragActive = true;
+                    isRightMouseDragActive = true;
                     gameObject.SendMessage("OnRightMouseDown",SendMessageOptions.DontRequireReceiver);
                 }
             }
-            downInPreviousFrame = true;
+            rightMouseDownInPreviousFrame = true;
         }
         else
         {
-            if (isDragActive)
+            if (isRightMouseDragActive)
             {
-                isDragActive = false;
+                isRightMouseDragActive = false;
                 gameObject.SendMessage("OnRightMouseUp",SendMessageOptions.DontRequireReceiver);
             }
-            downInPreviousFrame = false;
+            rightMouseDownInPreviousFrame = false;
         }
     }
 }

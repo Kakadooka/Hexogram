@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PanAndZoom : MonoBehaviour
+public class Pan_And_Zoom : MonoBehaviour
 {
 
     void setParameters(){
@@ -25,6 +25,8 @@ public class PanAndZoom : MonoBehaviour
     public int howManyHexesSelected;
     public int closestAxis;
     public float gapToHexEdge = 0f;
+
+    public bool blockedPlacement = false;
 
     int howManySelected(float differenceInX){      
         return (int)Mathf.Floor(draggedLine.x/differenceInX) + 1;
@@ -94,10 +96,22 @@ public class PanAndZoom : MonoBehaviour
         Camera.main.orthographicSize = Mathf.Clamp(Camera.main.orthographicSize - Input.GetAxis("Mouse ScrollWheel")*8f, zoomOutMin, zoomOutMax);
     }
 
+    void blockAndUnblockPlacementDependingOnMouseButtonInputs(){
+        if((Input.GetMouseButton(0) && Input.GetMouseButtonDown(1)) || (Input.GetMouseButton(1) && Input.GetMouseButtonDown(0))){
+            blockedPlacement = true;
+            hexgridHandler.draggedSquareOrigin = "";
+        }
+        else if(!Input.GetMouseButton(0) && !Input.GetMouseButton(1)){
+            blockedPlacement = false;
+        }
+    }
+
 	void Update () {
         calculateVariablesForDragSelectingUsindLeftMouseButton();
         panCameraUsingMiddleMouseButton();
         zoomUsingScroll();
+        blockAndUnblockPlacementDependingOnMouseButtonInputs();
+
 	}
 
 

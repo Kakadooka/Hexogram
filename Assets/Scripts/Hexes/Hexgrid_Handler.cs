@@ -7,6 +7,18 @@ using TMPro;
 public class Hexgrid_Handler : MonoBehaviour
 {
 
+    public int hexSize;
+    PanAndZoom panAndZoom;
+    
+    void Start()
+    {  
+        panAndZoom = gameObject.GetComponent<PanAndZoom>();
+
+        placeHexagons();
+        translateHexagons();
+        placeNumbers();
+    }
+
     void Update(){
         if(!Input.GetMouseButton(0) && !Input.GetMouseButton(1)){
             draggedSquareOrigin = "";
@@ -28,60 +40,82 @@ public class Hexgrid_Handler : MonoBehaviour
         return true;
     }
 
-    void selectInALineANumberOfHexesFromAStartingPosition(int yVectorHexSmaller,int yVectorHexLarger,int xVectorHexSmaller, int xVectorHexLarger, int hexDifference){
-        for(int i = 0; i < panAndZoom.howManyHexesSelected; i++){
-            if(checkIfHandlerArrayIsNotOutOfBounds()){
-                if(Input.GetMouseButtonUp(0)){
-                    hexHandlerArray[hexX][hexY].guessHexIsTrue();
-                    
-                }
-                else if(Input.GetMouseButtonUp(1)){
-                    hexHandlerArray[hexX][hexY].guessHexIsFalse();
-                }
-                else{                   
-                    hexHandlerArray[hexX][hexY].SetSpriteAndHoldDrag();
-                }
+    void changeHexStateDependingOnMouseUpInput(){
+        if(checkIfHandlerArrayIsNotOutOfBounds()){
+            if(Input.GetMouseButtonUp(0)){
+                hexHandlerArray[hexX][hexY].guessHexIsTrue();
+                
             }
-            hexY += hexX < hexSize+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
-            hexX += hexX < hexSize+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
+            else if(Input.GetMouseButtonUp(1)){
+                hexHandlerArray[hexX][hexY].guessHexIsFalse();
+            }
+            else{                   
+                hexHandlerArray[hexX][hexY].SetSpriteHoldAndDrag();
+            }
         }
     }
-    void deselectInALineTheRestOfHexesUntilOutOfBounds(int yVectorHexSmaller,int yVectorHexLarger,int xVectorHexSmaller, int xVectorHexLarger, int hexDifference){
+
+    void selectInALineANumberOfHexesFromAStartingPosition(){
+        for(int i = 0; i < panAndZoom.howManyHexesSelected; i++){
+            changeHexStateDependingOnMouseUpInput();
+            changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray();
+        }
+    }
+
+    void changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray(){
+        hexY += hexX < hexSize+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
+        hexX += hexX < hexSize+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
+    }
+
+    void deselectInALineTheRestOfHexesUntilOutOfBounds(){
         for(int i = 0; i <= hexSize*2; i++){
             if(lastClosestAxis!=panAndZoom.closestAxis){
-                hexY += hexX < hexSize+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
-                hexX += hexX < hexSize+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
+                changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray();
             }
             if(checkIfHandlerArrayIsNotOutOfBounds()){
                 hexHandlerArray[hexX][hexY].SetSpriteMaybe();
             }
             if(lastClosestAxis==panAndZoom.closestAxis){
-                hexY += hexX < hexSize+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
-                hexX += hexX < hexSize+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
+                changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray();
             }
         }
     }
 
-    void deselectEntireLineOnPreviousAxisIfAxisWasChanged(){
+    int yVectorHexSmaller, yVectorHexLarger, xVectorHexSmaller, xVectorHexLarger, hexDifference;
+    void changeHexVectorPropertiesByClosestAxis(int yVectorHexSmaller, int yVectorHexLarger, int xVectorHexSmaller, int xVectorHexLarger, int hexDifference){
+        this.yVectorHexSmaller = yVectorHexSmaller;
+        this.yVectorHexLarger = yVectorHexLarger;
+        this.xVectorHexSmaller = xVectorHexSmaller;
+        this.xVectorHexLarger = xVectorHexLarger;
+        this.hexDifference = hexDifference;
+    }
+
+    public void deselectEntireLineOnPreviousAxisIfAxisWasChanged(){
         if(lastClosestAxis!=panAndZoom.closestAxis){
             switch(lastClosestAxis){
                 case 0:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(1,0,-1,-1,1);
+                    changeHexVectorPropertiesByClosestAxis(1,0,-1,-1,1);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();  
                 break;
                 case 1:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(1,1,0,0,0);
+                    changeHexVectorPropertiesByClosestAxis(1,1,0,0,0);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 2:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(0,1,1,1,0);
+                    changeHexVectorPropertiesByClosestAxis(0,1,1,1,0);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 3:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(-1,0,1,1,0);
+                    changeHexVectorPropertiesByClosestAxis(-1,0,1,1,0);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 4:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(-1,-1,0,0,0);
+                    changeHexVectorPropertiesByClosestAxis(-1,-1,0,0,0);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 5:
-                    deselectInALineTheRestOfHexesUntilOutOfBounds(0,-1,-1,-1,1);
+                    changeHexVectorPropertiesByClosestAxis(0,-1,-1,-1,1);
+                    deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
             }   
         }
@@ -90,28 +124,34 @@ public class Hexgrid_Handler : MonoBehaviour
     void selectHexesDependingOnClosestAxisForLineLengthAndThenDeselectTheRestOfTheLine(){
         switch(panAndZoom.closestAxis){
             case 0:
-                selectInALineANumberOfHexesFromAStartingPosition(1,0,-1,-1,1);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(1,0,-1,-1,1);
+                changeHexVectorPropertiesByClosestAxis(1,0,-1,-1,1);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 1:
-                selectInALineANumberOfHexesFromAStartingPosition(1,1,0,0,0);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(1,1,0,0,0);
+                changeHexVectorPropertiesByClosestAxis(1,1,0,0,0);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 2:
-                selectInALineANumberOfHexesFromAStartingPosition(0,1,1,1,0);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(0,1,1,1,0);
+                changeHexVectorPropertiesByClosestAxis(0,1,1,1,0);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 3:
-                selectInALineANumberOfHexesFromAStartingPosition(-1,0,1,1,0);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(-1,0,1,1,0);
+                changeHexVectorPropertiesByClosestAxis(-1,0,1,1,0);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 4:
-                selectInALineANumberOfHexesFromAStartingPosition(-1,-1,0,0,0);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(-1,-1,0,0,0);
+                changeHexVectorPropertiesByClosestAxis(-1,-1,0,0,0);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 5:
-                selectInALineANumberOfHexesFromAStartingPosition(0,-1,-1,-1,1);
-                deselectInALineTheRestOfHexesUntilOutOfBounds(0,-1,-1,-1,1);
+                changeHexVectorPropertiesByClosestAxis(0,-1,-1,-1,1);
+                selectInALineANumberOfHexesFromAStartingPosition();
+                deselectInALineTheRestOfHexesUntilOutOfBounds();
             break; 
             
         }
@@ -420,18 +460,6 @@ public class Hexgrid_Handler : MonoBehaviour
         placeMiddleLineOfHexagons();
         placeBottomHalfOfHexagons();
 
-    }
-
-    public int hexSize;
-    PanAndZoom panAndZoom;
-    
-    void Start()
-    {  
-        panAndZoom = gameObject.GetComponent<PanAndZoom>();
-
-        placeHexagons();
-        translateHexagons();
-        placeNumbers();
     }
 
 }
