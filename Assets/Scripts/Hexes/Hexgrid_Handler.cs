@@ -7,25 +7,56 @@ using TMPro;
 public class Hexgrid_Handler : MonoBehaviour
 {
 
-    public int hexSize;
-    PanAndZoom panAndZoom;
-    
-    void Start()
-    {  
-        panAndZoom = gameObject.GetComponent<PanAndZoom>();
+    public int hexSize, leftNumbers, topRightNumbers, bottomRightNumbers;
+    Pan_And_Zoom panAndZoom;
+    Sound_Handler soundHandler;
+    UI_Stats_Handler uiStats;
+    Save_And_Load saveAndLoad;
 
+    int percentOfTrueStates, newGame;
+        
+
+    void getComponents(){
+        panAndZoom = gameObject.GetComponent<Pan_And_Zoom>();
+        soundHandler = gameObject.GetComponent<Sound_Handler>();
+        uiStats = gameObject.GetComponent<UI_Stats_Handler>();
+        saveAndLoad = gameObject.GetComponent<Save_And_Load>();
+    }
+
+    void setPlayerPrefs(){
+        percentOfTrueStates = PlayerPrefs.GetInt("percentage");
+        hexSize = PlayerPrefs.GetInt("size");
+        newGame = PlayerPrefs.GetInt("newGame");
+        leftNumbers = PlayerPrefs.GetInt("leftNumbers");
+        topRightNumbers = PlayerPrefs.GetInt("topRightNumbers");
+        bottomRightNumbers = PlayerPrefs.GetInt("bottomRightNumbers");  
+    }
+
+    void buildHexgrid(){
         placeHexagons();
         translateHexagons();
         placeNumbers();
     }
 
-    void Update(){
+    void Start()
+    {  
+        getComponents();
+        setPlayerPrefs();
+        buildHexgrid();
+    }
+
+    void resetSquareOriginOnIdleMouseButtons(){
         if(!Input.GetMouseButton(0) && !Input.GetMouseButton(1)){
             draggedSquareOrigin = "";
         }
+        else if(Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1)){
+            UndrawThreePreviousGuidingLines();
+        }
     }
 
-
+    void Update(){
+        resetSquareOriginOnIdleMouseButtons();
+    }
 
     public string draggedSquareOrigin = "";
     int lastClosestAxis=0;
@@ -40,19 +71,33 @@ public class Hexgrid_Handler : MonoBehaviour
         return true;
     }
 
+    
     void changeHexStateDependingOnMouseUpInput(){
         if(checkIfHandlerArrayIsNotOutOfBounds()){
             if(Input.GetMouseButtonUp(0)){
                 hexHandlerArray[hexX][hexY].guessHexIsTrue();
-                
             }
             else if(Input.GetMouseButtonUp(1)){
                 hexHandlerArray[hexX][hexY].guessHexIsFalse();
             }
-            else{                   
+            else{              
                 hexHandlerArray[hexX][hexY].SetSpriteHoldAndDrag();
             }
         }
+    }
+
+    public bool isPerfect = true, anyUnknownHexes = false;
+    void playConfirmSound(){
+        if(anyUnknownHexes){
+            if(isPerfect){
+                soundHandler.playConfirmPerfect();
+            }
+            else{
+                soundHandler.playConfirmError();
+            }
+        }
+        isPerfect = true;
+        anyUnknownHexes = false;
     }
 
     void selectInALineANumberOfHexesFromAStartingPosition(){
@@ -60,11 +105,46 @@ public class Hexgrid_Handler : MonoBehaviour
             changeHexStateDependingOnMouseUpInput();
             changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray();
         }
+        playConfirmSound();
+    }
+
+    void drawLine(Action doSomethingToHoverLight, int startingDraggingHexX, int startingDraggingHexY){
+        hexX = startingDraggingHexX; hexY = startingDraggingHexY;
+        for(int i = 0; i < hexSize*2; i++){
+            if(checkIfHandlerArrayIsNotOutOfBounds()){  
+                doSomethingToHoverLight();
+            }
+            changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray();
+        }
+    }
+
+    int startingDraggingHexX = 0, startingDraggingHexY = 0, previousStartingDraggingHexX, previousStartingDraggingHexY;
+    public void UndrawThreePreviousGuidingLines(){
+        previousStartingDraggingHexX = startingDraggingHexX; previousStartingDraggingHexY = startingDraggingHexY;
+        hexX = previousStartingDraggingHexX; hexY = previousStartingDraggingHexY;
+        changeHexVectorProperties(1,0,-1,-1,1);
+        drawLine(() => hexHandlerArray[hexX][hexY].disableHoverLight(), previousStartingDraggingHexX, previousStartingDraggingHexY);
+        changeHexVectorProperties(0,1,1,1,0);
+        drawLine(() => hexHandlerArray[hexX][hexY].disableHoverLight(), previousStartingDraggingHexX, previousStartingDraggingHexY);
+        changeHexVectorProperties(-1,-1,0,0,0);
+        drawLine(() => hexHandlerArray[hexX][hexY].disableHoverLight(), previousStartingDraggingHexX, previousStartingDraggingHexY);
+    }
+
+    public void DrawThreeGuidingLines(){
+        if(!uiStats.win){
+        startingDraggingHexX = hexX; startingDraggingHexY = hexY;
+        changeHexVectorProperties(1,0,-1,-1,1);
+        drawLine(() => hexHandlerArray[hexX][hexY].enableHoverLight(), startingDraggingHexX, startingDraggingHexY);
+        changeHexVectorProperties(0,1,1,1,0);
+        drawLine(() => hexHandlerArray[hexX][hexY].enableHoverLight(), startingDraggingHexX, startingDraggingHexY);
+        changeHexVectorProperties(-1,-1,0,0,0);
+        drawLine(() => hexHandlerArray[hexX][hexY].enableHoverLight(), startingDraggingHexX, startingDraggingHexY);
+        }
     }
 
     void changeTheNewHexByAVectorDependingOnIfItCrossedTheMiddleOfTheHexgridArray(){
-        hexY += hexX < hexSize+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
-        hexX += hexX < hexSize+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
+        hexY += hexX < hexSize-1+hexDifference ? yVectorHexLarger : yVectorHexSmaller;
+        hexX += hexX < hexSize-1+hexDifference ? xVectorHexLarger : xVectorHexSmaller;
     }
 
     void deselectInALineTheRestOfHexesUntilOutOfBounds(){
@@ -82,7 +162,7 @@ public class Hexgrid_Handler : MonoBehaviour
     }
 
     int yVectorHexSmaller, yVectorHexLarger, xVectorHexSmaller, xVectorHexLarger, hexDifference;
-    void changeHexVectorPropertiesByClosestAxis(int yVectorHexSmaller, int yVectorHexLarger, int xVectorHexSmaller, int xVectorHexLarger, int hexDifference){
+    void changeHexVectorProperties(int yVectorHexSmaller, int yVectorHexLarger, int xVectorHexSmaller, int xVectorHexLarger, int hexDifference){
         this.yVectorHexSmaller = yVectorHexSmaller;
         this.yVectorHexLarger = yVectorHexLarger;
         this.xVectorHexSmaller = xVectorHexSmaller;
@@ -94,27 +174,27 @@ public class Hexgrid_Handler : MonoBehaviour
         if(lastClosestAxis!=panAndZoom.closestAxis){
             switch(lastClosestAxis){
                 case 0:
-                    changeHexVectorPropertiesByClosestAxis(1,0,-1,-1,1);
+                    changeHexVectorProperties(1,0,-1,-1,1);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();  
                 break;
                 case 1:
-                    changeHexVectorPropertiesByClosestAxis(1,1,0,0,0);
+                    changeHexVectorProperties(1,1,0,0,0);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 2:
-                    changeHexVectorPropertiesByClosestAxis(0,1,1,1,0);
+                    changeHexVectorProperties(0,1,1,1,0);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 3:
-                    changeHexVectorPropertiesByClosestAxis(-1,0,1,1,0);
+                    changeHexVectorProperties(-1,0,1,1,0);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 4:
-                    changeHexVectorPropertiesByClosestAxis(-1,-1,0,0,0);
+                    changeHexVectorProperties(-1,-1,0,0,0);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
                 case 5:
-                    changeHexVectorPropertiesByClosestAxis(0,-1,-1,-1,1);
+                    changeHexVectorProperties(0,-1,-1,-1,1);
                     deselectInALineTheRestOfHexesUntilOutOfBounds();
                 break;
             }   
@@ -124,32 +204,32 @@ public class Hexgrid_Handler : MonoBehaviour
     void selectHexesDependingOnClosestAxisForLineLengthAndThenDeselectTheRestOfTheLine(){
         switch(panAndZoom.closestAxis){
             case 0:
-                changeHexVectorPropertiesByClosestAxis(1,0,-1,-1,1);
+                changeHexVectorProperties(1,0,-1,-1,1);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 1:
-                changeHexVectorPropertiesByClosestAxis(1,1,0,0,0);
+                changeHexVectorProperties(1,1,0,0,0);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 2:
-                changeHexVectorPropertiesByClosestAxis(0,1,1,1,0);
+                changeHexVectorProperties(0,1,1,1,0);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 3:
-                changeHexVectorPropertiesByClosestAxis(-1,0,1,1,0);
+                changeHexVectorProperties(-1,0,1,1,0);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 4:
-                changeHexVectorPropertiesByClosestAxis(-1,-1,0,0,0);
+                changeHexVectorProperties(-1,-1,0,0,0);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break;
             case 5:
-                changeHexVectorPropertiesByClosestAxis(0,-1,-1,-1,1);
+                changeHexVectorProperties(0,-1,-1,-1,1);
                 selectInALineANumberOfHexesFromAStartingPosition();
                 deselectInALineTheRestOfHexesUntilOutOfBounds();
             break; 
@@ -221,12 +301,12 @@ public class Hexgrid_Handler : MonoBehaviour
 
     void changeRightSideNumberPositionAfterNewLine(int i){
         if(i < hexSize){
-            numPosX = (hexSize*1f)-(i*0.5f)-0.1f;
+            numPosX = (hexSize*1f)-((i+1)*0.5f)-0.1f;
             numPosY = -0.78f-(i*0.76f);
         }
         else{
-            numPosX = (hexSize*1f)-(hexSize*0.5f)-((hexSize-i)*-1f);
-            numPosY = -0.78f-(hexSize*0.76f);
+            numPosX = (hexSize*1f)-(hexSize*0.5f)-((hexSize-1-i)*-1f);
+            numPosY = (hexSize*-0.76f);
         }
     }
 
@@ -268,7 +348,7 @@ public class Hexgrid_Handler : MonoBehaviour
                     streak++;
                 }
                 else if(streak != 0){
-                    placeTopSideNumberOnScene();
+                    placeTopSideNumberOnScene();//napraw translacje
                 }
             }
             if(streak != 0){
@@ -278,12 +358,12 @@ public class Hexgrid_Handler : MonoBehaviour
     }
 
     void changeLeftSideNumberPositionAfterNewLine(int i){
-        if(i <= hexSize){
+        if(i < hexSize){
             numPosX = startingPlaceX+(i*-0.5f)+0.8f;
             numPosY = startingPlaceY-(0.76f*i)-0.13f;
         }
         else{
-            numPosX = startingPlaceX+((i-hexSize-1)*0.5f)+0.8f-(hexSize-1)*0.5f;
+            numPosX = startingPlaceX+((i-hexSize+1)*0.5f)+0.8f-(hexSize-1)*0.5f;
             numPosY = startingPlaceY-(0.76f*i)-0.13f;
         }
     }   
@@ -332,39 +412,55 @@ public class Hexgrid_Handler : MonoBehaviour
 
     public List<List<bool>> hexGridStatesZ = new List<List<bool>>();
 
+    void translateTopLeftHexStatesFromYtoZ(){
+        for(int i = 0; i < hexSize; i++){
+            hexGridStatesZ.Add(new List<bool>());
+            for(int j = 0; j < hexSize+i; j++){
+                int x = hexSize*2-2-j;
+                int y = j >= hexSize ? i-j+hexSize-1 : i;
+                hexGridStatesZ[i].Add(hexGridStatesY[x][y]);
+            }
+        }
+    }
+
+    void translateBottomRightHexStatesFromYtoZ(){
+        for(int i = 0; i < hexSize-1; i++){
+            hexGridStatesZ.Add(new List<bool>());
+            for(int j = 0; j < hexSize*2-2-i; j++){
+                int x = hexSize*2-3-i-j;
+                int y = j >= hexSize-1-i ? hexSize+hexSize-2-j : i+hexSize;
+                hexGridStatesZ[i+hexSize].Add(hexGridStatesY[x][y]);
+            }
+        }     
+    }
+
     void translateHexStatesFromYtoZ(){
-        translateTopRightHexStatesFromYtoZ();
-        translateBottomLeftHexStatesFromYtoZ();
+        translateTopLeftHexStatesFromYtoZ();
+        translateBottomRightHexStatesFromYtoZ();
     }
 
     void translateTopLeftHexStatesFromXtoY(){
 
-        for(int i = 0; i < hexSize-1; i++){
+        for(int i = 0; i < hexSize; i++){
             hexGridStatesY.Add(new List<bool>());
-            for(int j = 0; j < hexSize+1+i; j++){
-                hexGridStatesY[i].Add(hexGridStatesX[j][j > hexSize ? hexSize-j+i : i]);
+            for(int j = 0; j < hexSize+i; j++){
+                int y = j >= hexSize ? hexSize+i-j-1 : i;
+                int x = j;
+                hexGridStatesY[i].Add(hexGridStatesX[x][y]);
             }
         }
     }
-
-    void translateMiddleHexStatesFromXtoY(){
-
-        for(int i = 0; i < 2; i++){
-            hexGridStatesY.Add(new List<bool>());
-            for(int j = 0; j < hexSize*2; j++){
-                hexGridStatesY[hexSize-1+i].Add(hexGridStatesX[j%(hexSize*2)+i][j > hexSize - i ? hexSize-j+hexSize-1 : hexSize-1+i]);
-            }
-        }
-    }
-
     void translateBottomRightHexStatesFromXtoY(){
-
+        
         for(int i = 0; i < hexSize-1; i++){
             hexGridStatesY.Add(new List<bool>());
-            for(int j = 0; j < (hexSize*2)-1-i; j++){
-                hexGridStatesY[hexSize+1+i].Add(hexGridStatesX[j+2+i][j > hexSize-i-2 ? (hexSize*2)-1-j : hexSize+1+i]);
+            for(int j = 0; j < (hexSize*2)-2-i; j++){
+
+                int y = j >= hexSize-i-1 ? hexSize+hexSize-j-2 : hexSize + i;
+                int x = j+i+1;
+                hexGridStatesY[hexSize+i].Add(hexGridStatesX[x][y]);
             }
-        }
+        }        
     }
 
     public List<List<bool>> hexGridStatesY = new List<List<bool>>();
@@ -372,16 +468,15 @@ public class Hexgrid_Handler : MonoBehaviour
     void translateHexStatesFromXtoY(){
 
         translateTopLeftHexStatesFromXtoY();
-        translateMiddleHexStatesFromXtoY();
         translateBottomRightHexStatesFromXtoY();
         
     }
 
-    public GameObject hexGameObject;
+    public GameObject hexObject, hoverLightObject;
     public List<List<Hex_Handler>> hexHandlerArray = new List<List<Hex_Handler>>();
 
-    void placeHexOnScene(Vector3 hexPosition, int x, int y){
-        GameObject hexPrefab = Instantiate(hexGameObject);
+    void placeNewHexOnScene(Vector3 hexPosition, int x, int y){
+        GameObject hexPrefab = Instantiate(hexObject);
         hexPrefab.name = "hex-"+x+"-"+y;
         hexPrefab.transform.position = hexPosition;
 
@@ -389,7 +484,12 @@ public class Hexgrid_Handler : MonoBehaviour
 
         hexHandlerArray[x][y].X = x;
         hexHandlerArray[x][y].Y = y;
-        hexHandlerArray[x][y].hexState = hexState;     
+        hexHandlerArray[x][y].hexState = hexState;
+
+        GameObject hoverLightPrefab = Instantiate(hoverLightObject);        
+        hoverLightPrefab.transform.position = hexPosition;
+        hoverLightPrefab.transform.SetParent(hexPrefab.transform);
+        hoverLightPrefab.SetActive(false);
     }
 
     public List<List<bool>> hexGridStatesX = new List<List<bool>>();
@@ -398,52 +498,52 @@ public class Hexgrid_Handler : MonoBehaviour
     System.Random random = new System.Random(Environment.TickCount);
     
     bool hexState;
-    public int percentOfTrueStates = 50;
     void randomizeHexState(){
         hexState = random.Next(100) < percentOfTrueStates;
     }
 
-    void placeTopHalfOfHexagons(){
+    void createAndPlaceTopHalfOfHexagons(){
 
-        for(int i = 0; i < hexSize; i++){
+        for(int i = 0; i < hexSize-1; i++){
             hexGridStatesX.Add(new List<bool>());
             hexHandlerArray.Add(new List<Hex_Handler>());
             for(int j = 0; j < hexSize+i;j++){
                 randomizeHexState();
                 hexGridStatesX[i].Add(hexState);
-                placeHexOnScene(new Vector3((j*2-i+2)*0.5f+startingPlaceX,i*-0.76f+startingPlaceY,0f), i, j);
+                placeNewHexOnScene(new Vector3((j*2-i+2)*0.5f+startingPlaceX,i*-0.76f+startingPlaceY,0f), i, j);
             }
         }
     }
 
-    void placeMiddleLineOfHexagons(){
+    void createAndPlaceMiddleLineOfHexagons(){
 
         hexGridStatesX.Add(new List<bool>());
         hexHandlerArray.Add(new List<Hex_Handler>());
-        for(int i = 0; i < hexSize*2; i++){
+        for(int i = 0; i < ((hexSize-1)*2)+1; i++){
             randomizeHexState();
-            hexGridStatesX[hexSize].Add(hexState);
-            placeHexOnScene(new Vector3((i*2-hexSize+2)*0.5f+startingPlaceX,(hexSize)*-0.76f+startingPlaceY,0f), hexSize, i);
+            hexGridStatesX[hexSize-1].Add(hexState);
+            placeNewHexOnScene(new Vector3((i*2-hexSize+3)*0.5f+startingPlaceX,(hexSize-1)*-0.76f+startingPlaceY,0f), hexSize-1, i);
         }
     }
 
-    void placeBottomHalfOfHexagons(){
+    void createAndPlaceBottomHalfOfHexagons(){
 
-        for(int i = 0; i < hexSize; i++){
+        for(int i = 0; i < hexSize-1; i++){
             hexGridStatesX.Add(new List<bool>());
             hexHandlerArray.Add(new List<Hex_Handler>());
-            for(int j = 0; j < hexSize*2-i-1;j++){
+            for(int j = 0; j < (hexSize-1)*2-i;j++){
                 randomizeHexState();
-                hexGridStatesX[hexSize+i+1].Add(hexState);
-                placeHexOnScene(new Vector3((i+j*2-hexSize+3)*0.5f+startingPlaceX,(hexSize+i+1)*-0.76f+startingPlaceY,0f), hexSize+i+1, j);
+                hexGridStatesX[hexSize+i].Add(hexState);
+                placeNewHexOnScene(new Vector3((i+j*2-hexSize+4)*0.5f+startingPlaceX,(hexSize+i)*-0.76f+startingPlaceY,0f), hexSize+i, j);
             }
         }
     }
 
+
     void placeNumbers(){
-        fillOutNumbersOnLeftSide();
-        fillOutNumbersOnTopSide();
-        fillOutNumbersOnRightSide();
+        if(leftNumbers == 1){fillOutNumbersOnLeftSide();}
+        if(topRightNumbers == 1){fillOutNumbersOnTopSide();}
+        if(bottomRightNumbers == 1){fillOutNumbersOnRightSide();}
     }
 
     void translateHexagons(){
@@ -451,16 +551,60 @@ public class Hexgrid_Handler : MonoBehaviour
         translateHexStatesFromYtoZ();
     }
 
+    void placeReadHexOnScene(int x, int y){
+        GameObject hexPrefab = Instantiate(hexObject);
+        hexPrefab.name = "hex-"+x+"-"+y;
+        hexPrefab.transform.position = hexPropertiesArray[x][y].position;
+
+        GameObject hoverLightPrefab = Instantiate(hoverLightObject);        
+        hoverLightPrefab.transform.position = hexPropertiesArray[x][y].position;
+        hoverLightPrefab.transform.SetParent(hexPrefab.transform);
+        hoverLightPrefab.SetActive(false);
+
+        hexHandlerArray[x].Add(hexPrefab.GetComponent<Hex_Handler>());
+        hexHandlerArray[x][y].X = x;
+        hexHandlerArray[x][y].Y = y;
+        hexHandlerArray[x][y].hexState = hexPropertiesArray[x][y].hexState;
+        hexHandlerArray[x][y].isStateKnown = hexPropertiesArray[x][y].isStateKnown;
+        hexHandlerArray[x][y].setSprite(hexPropertiesArray[x][y].spriteNum);
+
+
+    }
+
+    void readAndPlaceHexesFromArray(){
+        for(int i = 0; i < hexPropertiesArray.Count; i++){
+            hexGridStatesX.Add(new List<bool>());
+            hexHandlerArray.Add(new List<Hex_Handler>());
+            for(int j = 0; j < hexPropertiesArray[i].Count; j++){
+                hexGridStatesX[i].Add(hexPropertiesArray[i][j].state);
+                placeReadHexOnScene(i, j);
+            }
+        }
+
+    }
+
+    List<List<Save_And_Load.HexProperties>> hexPropertiesArray = new List<List<Save_And_Load.HexProperties>>();
+
     void placeHexagons(){
 
         startingPlaceX = hexSize*-0.5f-0.5f;
-        startingPlaceY = hexSize*0.76f;
+        startingPlaceY = (hexSize-1)*0.76f;
 
-        placeTopHalfOfHexagons();
-        placeMiddleLineOfHexagons();
-        placeBottomHalfOfHexagons();
+        if(newGame == 1){
+            createAndPlaceTopHalfOfHexagons();
+            createAndPlaceMiddleLineOfHexagons();
+            createAndPlaceBottomHalfOfHexagons();
+        }
+        else{
+            hexPropertiesArray = saveAndLoad.getHexProperties();      
+            readAndPlaceHexesFromArray();
+        }
+    }
+
+    void OnApplicationQuit(){
 
     }
+
 
 }
 

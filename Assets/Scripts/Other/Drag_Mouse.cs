@@ -9,18 +9,25 @@ public class Drag_Mouse : MonoBehaviour
     bool rightMouseDownInPreviousFrame = false;
     bool mouseOver = false;
     bool rightMouseDragActive = false;
+    bool startedOnHex = false;
 
     void OnMouseExit(){
         mouseOver = false;
     }
 
     void OnMouseOver(){
+        if(Input.GetMouseButtonDown(1)){
+            startedOnHex = true;
+        }
         mouseOver = true;
     }
     
-    void Update () {
+    void Update() {
+        if(Input.GetMouseButtonUp(1)){
+            startedOnHex = false;
+        }
 
-        if (Input.GetMouseButton(1) && (mouseOver || rightMouseDownInPreviousFrame))
+        if (Input.GetMouseButton(1) && (mouseOver || rightMouseDownInPreviousFrame) && startedOnHex)
         {
             if (rightMouseDownInPreviousFrame)
             {
